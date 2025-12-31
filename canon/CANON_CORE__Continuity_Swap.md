@@ -21,3 +21,11 @@ Swap e reidratação devem ser **autônomos**, com **autorização humana**.
 ## Operação
 - Mudanças detectadas: snapshot a cada **15 min** (somente se houver mudanças).
 - Modo de trabalho: debate primeiro, execução hard depois.
+
+## Definição de conclusão de Swap
+**Swap concluído = manifest.jsonl (tail) contém o delta e o handoff do ciclo atual.**  
+Se não aparecer no manifest, registrar no próximo delta como risco operacional e repetir o ciclo (não trocar de chat).
+
+## Definição de conclusão de Swap
+**Swap concluído = manifest.jsonl (tail) contém o delta e o handoff do ciclo atual.**  
+Se não aparecer no manifest, registrar no próximo delta como risco operacional e repetir o ciclo (não trocar de chat).

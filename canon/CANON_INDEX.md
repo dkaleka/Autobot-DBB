@@ -14,3 +14,5 @@ Este índice é a porta de entrada oficial do CANON do projeto.
 - CANON vive **apenas no Git**.
 - Tudo operacional (snapshots, logs, results queue, tokens, segredos) vive **apenas no VAULT**.
 - Promoção para CANON_LIVE só acontece com evidência mínima + aprovação humana.
+- DECISION_LEDGER: canon/DECISION_LEDGER.md
+- DECISION_LEDGER: canon/DECISION_LEDGER.md
