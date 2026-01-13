@@ -1,0 +1,8 @@
+ * Serving Flask app 'T01_handshake_server'
+ * Debug mode: off
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5055
+[33mPress CTRL+C to quit[0m
+/app/T01_handshake_server.py:13: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  return datetime.utcnow().isoformat(timespec="seconds") + "Z"
+127.0.0.1 - - [13/Jan/2026 17:13:32] "POST /health HTTP/1.1" 200 -

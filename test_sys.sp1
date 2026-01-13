@@ -1,0 +1,17 @@
+$old = @(
+  "DBB_Cloudflared_Tunnel",
+  "DBB_Cloudflared_Tunnel_OnStart",
+  "DBB_Cloudflared_Tunnel_Watchdog",
+  "DBB_Bridge_Service"
+)
+
+foreach ($n in $old) {
+  schtasks.exe /Query /TN $n 2>$null | Out-Null
+  if ($LASTEXITCODE -eq 0) {
+    schtasks.exe /End    /TN $n 2>$null | Out-Null
+    schtasks.exe /Delete /TN $n /F  | Out-Null
+    Write-Host "Deleted task: $n"
+  } else {
+    Write-Host "Not found: $n"
+  }
+}

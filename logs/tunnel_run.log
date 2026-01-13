@@ -1,0 +1,59 @@
+﻿2026-01-13T08:18:14Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T08:20:15Z | WARNING: Flask health did not respond in time. Starting tunnel anyway.
+2026-01-13T08:20:15Z | Starting cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T08:53:53Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T08:53:53Z | Flask is up (health ok).
+2026-01-13T08:53:53Z | Starting cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T09:03:47Z | cloudflared already running (PID(s): 22472). Exiting.
+2026-01-13T09:16:09Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T09:16:09Z | Flask is up (health ok).
+2026-01-13T09:16:09Z | Starting cloudflared tunnel run dbb-bridge-5055 (http2, ipv4) ...
+2026-01-13T09:54:31Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T09:54:31Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T09:54:31Z | Flask is up (health ok).
+2026-01-13T09:54:31Z | Starting cloudflared tunnel run dbb-bridge-5055 (http2, ipv4) ...
+2026-01-13T09:54:31Z | Tunnel started. PID=6244. Wrote E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\tunnel.pid
+2026-01-13T09:55:13Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T09:55:13Z | cloudflared tunnel already running for 'dbb-bridge-5055' (PID(s): 6244). Exiting.
+2026-01-13T10:00:23Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T10:00:23Z | cloudflared tunnel already running for 'dbb-bridge-5055' (PID(s): 6244). Exiting.
+2026-01-13T10:06:08Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T10:06:08Z | cloudflared tunnel already running for 'dbb-bridge-5055' (PID(s): 6244). Exiting.
+2026-01-13T10:08:13Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T10:08:13Z | cloudflared tunnel already running for 'dbb-bridge-5055' (PID(s): 6244). Exiting.
+2026-01-13T14:40:14Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T14:40:14Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T14:42:14Z | ERROR: Flask health did not respond in time. Aborting tunnel start.
+2026-01-13T15:06:09Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T15:06:09Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T15:06:09Z | Flask is up (health ok).
+2026-01-13T15:06:09Z | Starting cloudflared: --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+2026-01-13T15:06:09Z | Tunnel started. PID=4968. Wrote E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect\tunnel.pid
+2026-01-13T15:07:32Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T15:07:32Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T15:07:32Z | Flask is up (health ok).
+2026-01-13T15:07:32Z | Starting cloudflared: --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+2026-01-13T15:07:32Z | Tunnel started. PID=21076. Wrote E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect\tunnel.pid
+2026-01-13T15:12:16Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T15:12:16Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T15:12:16Z | Flask is up (health ok).
+2026-01-13T15:12:16Z | Starting cloudflared: --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+2026-01-13T15:12:16Z | Tunnel started. PID=10288. Wrote E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect\tunnel.pid
+2026-01-13T15:12:52Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T15:12:52Z | cloudflared tunnel already running for 'dbb-bridge-5055' (PID(s): 10288). Exiting.
+2026-01-13T15:13:00Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T15:13:00Z | cloudflared tunnel already running for 'dbb-bridge-5055' (PID(s): 10288). Exiting.
+2026-01-13T15:13:42Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T15:13:42Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T15:13:42Z | Flask is up (health ok).
+2026-01-13T15:13:42Z | Starting cloudflared: --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+2026-01-13T15:13:42Z | Tunnel started. PID=3360. Wrote E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect\tunnel.pid
+2026-01-13T15:17:01Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T15:17:01Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T15:17:01Z | Flask is up (health ok).
+2026-01-13T15:17:01Z | Starting cloudflared: --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+2026-01-13T15:17:01Z | Tunnel started. PID=19692. Wrote E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect\tunnel.pid
+2026-01-13T15:17:02Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T15:17:02Z | cloudflared tunnel already running for 'dbb-bridge-5055' (PID(s): 19692). Exiting.
+2026-01-13T15:22:14Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T15:22:14Z | cloudflared tunnel already running for 'dbb-bridge-5055' (PID(s): 19692). Exiting.

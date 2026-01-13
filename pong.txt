@@ -1,0 +1,1 @@
+PONG_TEST_OK

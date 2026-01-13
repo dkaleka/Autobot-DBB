@@ -1,0 +1,114 @@
+# E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\run_tunnel.ps1
+$ErrorActionPreference = "Stop"
+
+# =========================
+# CONFIG
+# =========================
+$baseDir    = "E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT"
+$logDir     = Join-Path $baseDir "logs"
+
+$tunnelName  = "dbb-bridge-5055"
+$originHealth = "http://127.0.0.1:5055/health"
+
+# Forçar (evita QUIC/IPv6 "rede inacessível")
+$forceArgs = @("--protocol","http2","--edge-ip-version","4")
+
+# Retry Flask
+$maxWaitFlaskSeconds = 60
+$pollEverySeconds    = 2
+
+# PID do tunnel
+$tunnelPidFile = Join-Path $baseDir "tunnel.pid"
+
+# Logs
+$logFile = Join-Path $logDir "tunnel_run.log"
+$cloudflaredStdout = Join-Path $logDir "cloudflared_stdout.log"
+$cloudflaredStderr = Join-Path $logDir "cloudflared_stderr.log"
+
+function Log([string]$msg) {
+  try {
+    if (!(Test-Path $logDir)) { New-Item -ItemType Directory -Force -Path $logDir | Out-Null }
+    $line = ("{0} | {1}" -f ([DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")), $msg)
+    Add-Content -Path $logFile -Value $line -Encoding UTF8
+  } catch {}
+  Write-Host $msg
+}
+
+function Resolve-CloudflaredPath {
+  # 1) Tenta PATH
+  try {
+    $cmd = Get-Command "cloudflared.exe" -ErrorAction Stop
+    if ($cmd -and $cmd.Source -and (Test-Path $cmd.Source)) { return $cmd.Source }
+  } catch {}
+
+  # 2) Fallback (WinGet link)
+  $fallback = "C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe"
+  if (Test-Path $fallback) { return $fallback }
+
+  return $null
+}
+
+# =========================
+# 0) Resolve cloudflared
+# =========================
+$cloudflared = Resolve-CloudflaredPath
+if (!$cloudflared) {
+  Log "ERROR: cloudflared.exe not found (PATH and fallback failed). Aborting."
+  exit 1
+}
+Log "cloudflared resolved to: $cloudflared"
+
+# =========================
+# 1) Anti-dup forte (somente este tunnel)
+# =========================
+$matches = Get-CimInstance Win32_Process -Filter "Name='cloudflared.exe'" |
+  Where-Object { $_.CommandLine -match "(?i)\btunnel\s+run\s+$([regex]::Escape($tunnelName))\b" }
+
+if ($matches) {
+  $pids = ($matches | Select-Object -ExpandProperty ProcessId) -join ","
+  Log ("cloudflared tunnel already running for '{0}' (PID(s): {1}). Exiting." -f $tunnelName, $pids)
+  exit 0
+}
+
+# =========================
+# 2) Espera Flask (OBRIGATÓRIO)
+# =========================
+$maxTries = [Math]::Ceiling($maxWaitFlaskSeconds / $pollEverySeconds)
+Log ("Waiting for Flask health at {0} (up to {1}s)..." -f $originHealth, $maxWaitFlaskSeconds)
+
+$flaskOk = $false
+for ($i = 1; $i -le $maxTries; $i++) {
+  try {
+    $r = Invoke-RestMethod -Method Post -Uri $originHealth -TimeoutSec 2
+    if ($r -and $r.ok -eq $true) { $flaskOk = $true; break }
+  } catch {}
+  Start-Sleep -Seconds $pollEverySeconds
+}
+
+if (!$flaskOk) {
+  Log "ERROR: Flask health did not respond in time. Aborting tunnel start."
+  exit 1
+}
+Log "Flask is up (health ok)."
+
+# =========================
+# 3) Start tunnel (background, com logs + pid)
+# =========================
+Log ("Starting cloudflared tunnel run {0} (http2, ipv4) ..." -f $tunnelName)
+
+# Monta args
+$args = @() + $forceArgs + @("tunnel","run",$tunnelName)
+
+# Start-Process (não prende a janela azul)
+$p = Start-Process -FilePath $cloudflared `
+  -ArgumentList $args `
+  -WorkingDirectory $baseDir `
+  -PassThru `
+  -WindowStyle Hidden `
+  -RedirectStandardOutput $cloudflaredStdout `
+  -RedirectStandardError  $cloudflaredStderr
+
+Set-Content -Path $tunnelPidFile -Value $p.Id -Encoding ASCII
+Log ("Tunnel started. PID={0}. Wrote {1}" -f $p.Id, $tunnelPidFile)
+
+exit 0

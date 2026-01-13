@@ -1,0 +1,478 @@
+PowerShell 7.5.4
+PS C:\Users\MAIN> cd E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> Get-Content .\logs\tunnel_watchdog.log -Tail 80
+2026-01-13T10:05:00Z | WATCHDOG START | public=https://bridge.meidaledolls.com.br/health | threshold=3 | every=20s
+2026-01-13T10:08:40Z | WATCHDOG START | public=https://bridge.meidaledolls.com.br/health | threshold=3 | every=20s
+2026-01-13T10:10:24Z | public health FAIL (1/3)
+2026-01-13T10:10:44Z | public health FAIL (2/3)
+2026-01-13T10:11:04Z | public health FAIL (3/3)
+2026-01-13T10:11:06Z | origin health FAIL too -> NOT restarting tunnel (would flap). Waiting...
+2026-01-13T10:11:27Z | public health FAIL (1/3)
+2026-01-13T10:11:47Z | public health FAIL (2/3)
+2026-01-13T10:12:07Z | public health FAIL (3/3)
+2026-01-13T10:12:09Z | origin health FAIL too -> NOT restarting tunnel (would flap). Waiting...
+2026-01-13T10:12:29Z | public health FAIL (1/3)
+2026-01-13T10:12:49Z | public health FAIL (2/3)
+2026-01-13T10:13:09Z | public health FAIL (3/3)
+2026-01-13T10:13:12Z | origin health FAIL too -> NOT restarting tunnel (would flap). Waiting...
+2026-01-13T10:13:32Z | public health FAIL (1/3)
+2026-01-13T10:13:52Z | public health FAIL (2/3)
+2026-01-13T10:14:12Z | public health FAIL (3/3)
+2026-01-13T10:14:14Z | origin health FAIL too -> NOT restarting tunnel (would flap). Waiting...
+2026-01-13T10:14:34Z | public health FAIL (1/3)
+2026-01-13T10:14:54Z | public health FAIL (2/3)
+2026-01-13T15:07:07Z | WATCHDOG START | public=https://bridge.meidaledolls.com.br/health | threshold=3 | every=20s
+2026-01-13T15:07:07Z | public health FAIL (1/3)
+2026-01-13T15:07:07Z | tunnel process not running -> attempting start (requires origin OK).
+2026-01-13T15:07:09Z | origin health FAIL -> attempting run_flask.ps1
+2026-01-13T15:07:32Z | public health FAIL (2/3)
+2026-01-13T15:07:32Z | tunnel process not running -> attempting start (requires origin OK).
+2026-01-13T15:07:52Z | public health OK (recovered). Resetting fail counter.
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:5055/health"
+
+  ok service              timestamp
+  -- -------              ---------
+True T01_handshake_server 13/01/2026 15:09:21
+
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> netstat -ano | findstr ":5055"
+  TCP    127.0.0.1:5055         0.0.0.0:0              LISTENING       15120
+  TCP    127.0.0.1:49687        127.0.0.1:5055         TIME_WAIT       0
+  TCP    127.0.0.1:51658        127.0.0.1:5055         TIME_WAIT       0
+  TCP    127.0.0.1:51659        127.0.0.1:5055         TIME_WAIT       0
+  TCP    127.0.0.1:60500        127.0.0.1:5055         TIME_WAIT       0
+  TCP    127.0.0.1:63268        127.0.0.1:5055         TIME_WAIT       0
+  TCP    127.0.0.1:63271        127.0.0.1:5055         TIME_WAIT       0
+  TCP    127.0.0.1:65032        127.0.0.1:5055         TIME_WAIT       0
+  TCP    127.0.0.1:65035        127.0.0.1:5055         TIME_WAIT       0
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:5055/health"
+
+  ok service              timestamp
+  -- -------              ---------
+True T01_handshake_server 13/01/2026 15:09:27
+
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> netstat -ano | findstr ":5055"
+  TCP    127.0.0.1:5055         0.0.0.0:0              LISTENING       15120
+  TCP    127.0.0.1:49687        127.0.0.1:5055         TIME_WAIT       0
+  TCP    127.0.0.1:51658        127.0.0.1:5055         TIME_WAIT       0
+  TCP    127.0.0.1:51659        127.0.0.1:5055         TIME_WAIT       0
+  TCP    127.0.0.1:60500        127.0.0.1:5055         TIME_WAIT       0
+  TCP    127.0.0.1:63268        127.0.0.1:5055         TIME_WAIT       0
+  TCP    127.0.0.1:63271        127.0.0.1:5055         TIME_WAIT       0
+  TCP    127.0.0.1:63272        127.0.0.1:5055         TIME_WAIT       0
+  TCP    127.0.0.1:65032        127.0.0.1:5055         TIME_WAIT       0
+  TCP    127.0.0.1:65035        127.0.0.1:5055         TIME_WAIT       0
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> Get-CimInstance Win32_Process -Filter "Name='cloudflared.exe'" | Select ProcessId,CommandLine
+
+ProcessId CommandLine
+--------- -----------
+    21076 "C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Packages\Cloudflare.cloudflared_Microsoft.Winget.Source_8wekyb…
+
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> Get-Content .\logs\tunnel_run.log -Tail 80
+2026-01-13T08:18:14Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T08:20:15Z | WARNING: Flask health did not respond in time. Starting tunnel anyway.
+2026-01-13T08:20:15Z | Starting cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T08:53:53Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T08:53:53Z | Flask is up (health ok).
+2026-01-13T08:53:53Z | Starting cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T09:03:47Z | cloudflared already running (PID(s): 22472). Exiting.
+2026-01-13T09:16:09Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T09:16:09Z | Flask is up (health ok).
+2026-01-13T09:16:09Z | Starting cloudflared tunnel run dbb-bridge-5055 (http2, ipv4) ...
+2026-01-13T09:54:31Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T09:54:31Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T09:54:31Z | Flask is up (health ok).
+2026-01-13T09:54:31Z | Starting cloudflared tunnel run dbb-bridge-5055 (http2, ipv4) ...
+2026-01-13T09:54:31Z | Tunnel started. PID=6244. Wrote E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\tunnel.pid
+2026-01-13T09:55:13Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T09:55:13Z | cloudflared tunnel already running for 'dbb-bridge-5055' (PID(s): 6244). Exiting.
+2026-01-13T10:00:23Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T10:00:23Z | cloudflared tunnel already running for 'dbb-bridge-5055' (PID(s): 6244). Exiting.
+2026-01-13T10:06:08Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T10:06:08Z | cloudflared tunnel already running for 'dbb-bridge-5055' (PID(s): 6244). Exiting.
+2026-01-13T10:08:13Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T10:08:13Z | cloudflared tunnel already running for 'dbb-bridge-5055' (PID(s): 6244). Exiting.
+2026-01-13T14:40:14Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T14:40:14Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T14:42:14Z | ERROR: Flask health did not respond in time. Aborting tunnel start.
+2026-01-13T15:06:09Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T15:06:09Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T15:06:09Z | Flask is up (health ok).
+2026-01-13T15:06:09Z | Starting cloudflared: --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+2026-01-13T15:06:09Z | Tunnel started. PID=4968. Wrote E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect\tunnel.pid
+2026-01-13T15:07:32Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T15:07:32Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T15:07:32Z | Flask is up (health ok).
+2026-01-13T15:07:32Z | Starting cloudflared: --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+2026-01-13T15:07:32Z | Tunnel started. PID=21076. Wrote E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect\tunnel.pid
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> Get-Content .\logs\tunnel_stop.log -Tail 80
+2026-01-13T07:42:42Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T07:42:42Z | Killing PID 1108 | "C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe" tunnel run dbb-bridge-5055
+2026-01-13T07:42:42Z | Stopped 1 cloudflared process(es).
+2026-01-13T08:13:28Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T08:13:28Z | No matching cloudflared tunnel run process found for tunnel 'dbb-bridge-5055'. Nothing to stop.
+2026-01-13T08:36:04Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T08:36:04Z | No matching cloudflared tunnel run process found for tunnel 'dbb-bridge-5055'. Nothing to stop.
+2026-01-13T08:45:12Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T08:45:12Z | Killing PID 16124 | "C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe" tunnel run dbb-bridge-5055
+2026-01-13T08:45:12Z | Stopped 1 cloudflared process(es).
+2026-01-13T08:53:09Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T08:53:10Z | No matching cloudflared tunnel run process found for tunnel 'dbb-bridge-5055'. Nothing to stop.
+2026-01-13T09:16:02Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T09:16:02Z | Killing PID 22472 | "C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe" --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+2026-01-13T09:16:02Z | Stopped 1 cloudflared process(es).
+2026-01-13T09:53:24Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T09:53:24Z | Killing PID 19200 | "C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe" --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+2026-01-13T09:53:24Z | Stopped 1 cloudflared process(es).
+2026-01-13T09:55:42Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T10:09:37Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T14:39:30Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T14:39:30Z | Killing PID 6244 | "C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe" --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+2026-01-13T14:39:30Z | Stopped via tunnel.pid.
+2026-01-13T14:41:36Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T14:41:36Z | No matching cloudflared tunnel run process found for tunnel 'dbb-bridge-5055'. Nothing to stop.
+2026-01-13T14:44:14Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T14:44:14Z | No matching cloudflared tunnel run process found for tunnel 'dbb-bridge-5055'. Nothing to stop.
+2026-01-13T15:06:43Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T15:06:43Z | Killing PID 4968 | "C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Packages\Cloudflare.cloudflared_Microsoft.Winget.Source_8wekyb3d8bbwe\cloudflared.exe" --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+2026-01-13T15:06:43Z | Stopped via tunnel.pid.
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> Get-Content .\logs\tunnel_watchdog.log -Tail 80
+2026-01-13T10:05:00Z | WATCHDOG START | public=https://bridge.meidaledolls.com.br/health | threshold=3 | every=20s
+2026-01-13T10:08:40Z | WATCHDOG START | public=https://bridge.meidaledolls.com.br/health | threshold=3 | every=20s
+2026-01-13T10:10:24Z | public health FAIL (1/3)
+2026-01-13T10:10:44Z | public health FAIL (2/3)
+2026-01-13T10:11:04Z | public health FAIL (3/3)
+2026-01-13T10:11:06Z | origin health FAIL too -> NOT restarting tunnel (would flap). Waiting...
+2026-01-13T10:11:27Z | public health FAIL (1/3)
+2026-01-13T10:11:47Z | public health FAIL (2/3)
+2026-01-13T10:12:07Z | public health FAIL (3/3)
+2026-01-13T10:12:09Z | origin health FAIL too -> NOT restarting tunnel (would flap). Waiting...
+2026-01-13T10:12:29Z | public health FAIL (1/3)
+2026-01-13T10:12:49Z | public health FAIL (2/3)
+2026-01-13T10:13:09Z | public health FAIL (3/3)
+2026-01-13T10:13:12Z | origin health FAIL too -> NOT restarting tunnel (would flap). Waiting...
+2026-01-13T10:13:32Z | public health FAIL (1/3)
+2026-01-13T10:13:52Z | public health FAIL (2/3)
+2026-01-13T10:14:12Z | public health FAIL (3/3)
+2026-01-13T10:14:14Z | origin health FAIL too -> NOT restarting tunnel (would flap). Waiting...
+2026-01-13T10:14:34Z | public health FAIL (1/3)
+2026-01-13T10:14:54Z | public health FAIL (2/3)
+2026-01-13T15:07:07Z | WATCHDOG START | public=https://bridge.meidaledolls.com.br/health | threshold=3 | every=20s
+2026-01-13T15:07:07Z | public health FAIL (1/3)
+2026-01-13T15:07:07Z | tunnel process not running -> attempting start (requires origin OK).
+2026-01-13T15:07:09Z | origin health FAIL -> attempting run_flask.ps1
+2026-01-13T15:07:32Z | public health FAIL (2/3)
+2026-01-13T15:07:32Z | tunnel process not running -> attempting start (requires origin OK).
+2026-01-13T15:07:52Z | public health OK (recovered). Resetting fail counter.
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> Get-Content .\logs\tunnel_run.log -Tail 80
+2026-01-13T08:18:14Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T08:20:15Z | WARNING: Flask health did not respond in time. Starting tunnel anyway.
+2026-01-13T08:20:15Z | Starting cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T08:53:53Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T08:53:53Z | Flask is up (health ok).
+2026-01-13T08:53:53Z | Starting cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T09:03:47Z | cloudflared already running (PID(s): 22472). Exiting.
+2026-01-13T09:16:09Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T09:16:09Z | Flask is up (health ok).
+2026-01-13T09:16:09Z | Starting cloudflared tunnel run dbb-bridge-5055 (http2, ipv4) ...
+2026-01-13T09:54:31Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T09:54:31Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T09:54:31Z | Flask is up (health ok).
+2026-01-13T09:54:31Z | Starting cloudflared tunnel run dbb-bridge-5055 (http2, ipv4) ...
+2026-01-13T09:54:31Z | Tunnel started. PID=6244. Wrote E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\tunnel.pid
+2026-01-13T09:55:13Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T09:55:13Z | cloudflared tunnel already running for 'dbb-bridge-5055' (PID(s): 6244). Exiting.
+2026-01-13T10:00:23Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T10:00:23Z | cloudflared tunnel already running for 'dbb-bridge-5055' (PID(s): 6244). Exiting.
+2026-01-13T10:06:08Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T10:06:08Z | cloudflared tunnel already running for 'dbb-bridge-5055' (PID(s): 6244). Exiting.
+2026-01-13T10:08:13Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T10:08:13Z | cloudflared tunnel already running for 'dbb-bridge-5055' (PID(s): 6244). Exiting.
+2026-01-13T14:40:14Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T14:40:14Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T14:42:14Z | ERROR: Flask health did not respond in time. Aborting tunnel start.
+2026-01-13T15:06:09Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T15:06:09Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T15:06:09Z | Flask is up (health ok).
+2026-01-13T15:06:09Z | Starting cloudflared: --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+2026-01-13T15:06:09Z | Tunnel started. PID=4968. Wrote E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect\tunnel.pid
+2026-01-13T15:07:32Z | cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+2026-01-13T15:07:32Z | Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+2026-01-13T15:07:32Z | Flask is up (health ok).
+2026-01-13T15:07:32Z | Starting cloudflared: --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+2026-01-13T15:07:32Z | Tunnel started. PID=21076. Wrote E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect\tunnel.pid
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> Get-Content .\logs\tunnel_stop.log -Tail 80
+2026-01-13T07:42:42Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T07:42:42Z | Killing PID 1108 | "C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe" tunnel run dbb-bridge-5055
+2026-01-13T07:42:42Z | Stopped 1 cloudflared process(es).
+2026-01-13T08:13:28Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T08:13:28Z | No matching cloudflared tunnel run process found for tunnel 'dbb-bridge-5055'. Nothing to stop.
+2026-01-13T08:36:04Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T08:36:04Z | No matching cloudflared tunnel run process found for tunnel 'dbb-bridge-5055'. Nothing to stop.
+2026-01-13T08:45:12Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T08:45:12Z | Killing PID 16124 | "C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe" tunnel run dbb-bridge-5055
+2026-01-13T08:45:12Z | Stopped 1 cloudflared process(es).
+2026-01-13T08:53:09Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T08:53:10Z | No matching cloudflared tunnel run process found for tunnel 'dbb-bridge-5055'. Nothing to stop.
+2026-01-13T09:16:02Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T09:16:02Z | Killing PID 22472 | "C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe" --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+2026-01-13T09:16:02Z | Stopped 1 cloudflared process(es).
+2026-01-13T09:53:24Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T09:53:24Z | Killing PID 19200 | "C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe" --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+2026-01-13T09:53:24Z | Stopped 1 cloudflared process(es).
+2026-01-13T09:55:42Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T10:09:37Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T14:39:30Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T14:39:30Z | Killing PID 6244 | "C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe" --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+2026-01-13T14:39:30Z | Stopped via tunnel.pid.
+2026-01-13T14:41:36Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T14:41:36Z | No matching cloudflared tunnel run process found for tunnel 'dbb-bridge-5055'. Nothing to stop.
+2026-01-13T14:44:14Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T14:44:14Z | No matching cloudflared tunnel run process found for tunnel 'dbb-bridge-5055'. Nothing to stop.
+2026-01-13T15:06:43Z | Stopping cloudflared tunnel run dbb-bridge-5055 ...
+2026-01-13T15:06:43Z | Killing PID 4968 | "C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Packages\Cloudflare.cloudflared_Microsoft.Winget.Source_8wekyb3d8bbwe\cloudflared.exe" --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+2026-01-13T15:06:43Z | Stopped via tunnel.pid.
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> Get-Content .\logs\tunnel_watchdog.log -Tail 80
+2026-01-13T10:05:00Z | WATCHDOG START | public=https://bridge.meidaledolls.com.br/health | threshold=3 | every=20s
+2026-01-13T10:08:40Z | WATCHDOG START | public=https://bridge.meidaledolls.com.br/health | threshold=3 | every=20s
+2026-01-13T10:10:24Z | public health FAIL (1/3)
+2026-01-13T10:10:44Z | public health FAIL (2/3)
+2026-01-13T10:11:04Z | public health FAIL (3/3)
+2026-01-13T10:11:06Z | origin health FAIL too -> NOT restarting tunnel (would flap). Waiting...
+2026-01-13T10:11:27Z | public health FAIL (1/3)
+2026-01-13T10:11:47Z | public health FAIL (2/3)
+2026-01-13T10:12:07Z | public health FAIL (3/3)
+2026-01-13T10:12:09Z | origin health FAIL too -> NOT restarting tunnel (would flap). Waiting...
+2026-01-13T10:12:29Z | public health FAIL (1/3)
+2026-01-13T10:12:49Z | public health FAIL (2/3)
+2026-01-13T10:13:09Z | public health FAIL (3/3)
+2026-01-13T10:13:12Z | origin health FAIL too -> NOT restarting tunnel (would flap). Waiting...
+2026-01-13T10:13:32Z | public health FAIL (1/3)
+2026-01-13T10:13:52Z | public health FAIL (2/3)
+2026-01-13T10:14:12Z | public health FAIL (3/3)
+2026-01-13T10:14:14Z | origin health FAIL too -> NOT restarting tunnel (would flap). Waiting...
+2026-01-13T10:14:34Z | public health FAIL (1/3)
+2026-01-13T10:14:54Z | public health FAIL (2/3)
+2026-01-13T15:07:07Z | WATCHDOG START | public=https://bridge.meidaledolls.com.br/health | threshold=3 | every=20s
+2026-01-13T15:07:07Z | public health FAIL (1/3)
+2026-01-13T15:07:07Z | tunnel process not running -> attempting start (requires origin OK).
+2026-01-13T15:07:09Z | origin health FAIL -> attempting run_flask.ps1
+2026-01-13T15:07:32Z | public health FAIL (2/3)
+2026-01-13T15:07:32Z | tunnel process not running -> attempting start (requires origin OK).
+2026-01-13T15:07:52Z | public health OK (recovered). Resetting fail counter.
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> .\stop_flask.ps1
+Stopping Flask ...
+Killing PID 3272 (python)
+OK: Flask stopped (health down).
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> ./test_sys.sp1
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> $script = "E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\bridge_service.ps1"
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> $tr = '"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $script + '"'
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect>
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> schtasks.exe /Create /TN "DBB_Bridge_Service" /SC ONLOGON /RL HIGHEST /F /TR $tr
+ÊXITO: a tarefa agendada "DBB_Bridge_Service" foi criada corretamente.
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> schtasks.exe /Run /TN "DBB_Bridge_Service"
+ÊXITO: tentativa de executar a tarefa agendada "DBB_Bridge_Service".
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> schtasks.exe /Query /TN "DBB_Bridge_Service" /V /FO LIST
+
+Pasta: \
+Nome do host:                                            CORE
+Nome da tarefa:                                          \DBB_Bridge_Service
+Hora da próxima execução:                             N/A
+Status:                                                  Em execução
+Modo de Logon:                                           Interativo apenas
+Horário da última execução:                          13/01/2026 12:22:14
+Último resultado:                                       267009
+Autor:                                                   CORE\MAIN
+Tarefa a ser executada:                                  "C:\Program Files\PowerShell\7\pwsh.exe" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\bridge_service.ps1"
+Iniciar em:                                              N/A
+Comentário:                                             N/A
+Estado de tarefa agendada:                               Habilitado
+Tempo Ocioso:                                            Desativado
+Gerenciamento de Energia:                                Parar se estiver usando baterias, Não iniciar se estiver usando baterias
+Executar como Usuário:                                  MAIN
+Excluir tarefa se não for reagendada:                   Desativado
+Interromper tarefa se for executada X horas e X minutos: 72:00:00
+Agendar:                                                 O agendamento de dados não está disponível neste formato.
+Tipo de Agendamento:                                     No logon
+Hora de início:                                         N/A
+Data de início:                                         N/A
+Data de término:                                        N/A
+Dias:                                                    N/A
+Meses:                                                   N/A
+Repetir: a cada:                                         N/A
+Repetir: até: horário:                                 N/A
+Repetir: até: duração:                                N/A
+Repetir: parar se ainda estiver em execução:           N/A
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> schtasks.exe /End /TN "DBB_Bridge_Service"
+ÊXITO: tarefa agendada "DBB_Bridge_Service" terminada com êxito.
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect>
+
+
+
+
+PowerShell 7.5.4
+PS C:\Users\MAIN> cd
+PS C:\Users\MAIN> cd E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> .\stop_tunnel.ps1
+Stopping cloudflared tunnel run dbb-bridge-5055 ...
+Killing PID 21076 | "C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Packages\Cloudflare.cloudflared_Microsoft.Winget.Source_8wekyb3d8bbwe\cloudflared.exe" --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+Stopped via tunnel.pid.
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> .\stop_flask.ps1
+Stopping Flask ...
+Killing PID 15120 (python)
+OK: Flask stopped (health down).
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> .\run_flask.ps1
+Starting Flask: python "E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\T01_handshake_server.py"
+Flask started and port is listening. Adopted PID from port: 3272
+Flask is healthy (/health ok).
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> .\run_tunnel.ps1
+cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+Flask is up (health ok).
+Starting cloudflared: --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+Tunnel started. PID=10288. Wrote E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect\tunnel.pid
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:5055/health"
+
+  ok service              timestamp
+  -- -------              ---------
+True T01_handshake_server 13/01/2026 15:12:29
+
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> Invoke-RestMethod -Method Post -Uri "https://bridge.meidaledolls.com.br/health"
+
+  ok service              timestamp
+  -- -------              ---------
+True T01_handshake_server 13/01/2026 15:12:39
+
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> .\run_tunnel.ps1
+cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+cloudflared tunnel already running for 'dbb-bridge-5055' (PID(s): 10288). Exiting.
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> .\run_tunnel.ps1
+cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+cloudflared tunnel already running for 'dbb-bridge-5055' (PID(s): 10288). Exiting.
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> .\stop_tunnel.ps1
+Stopping cloudflared tunnel run dbb-bridge-5055 ...
+Killing PID 10288 | "C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Packages\Cloudflare.cloudflared_Microsoft.Winget.Source_8wekyb3d8bbwe\cloudflared.exe" --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+Stopped via tunnel.pid.
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> .\watchdog_tunnel.ps1
+WATCHDOG START | public=https://bridge.meidaledolls.com.br/health | threshold=3 | every=20s
+public health FAIL (1/3)
+public health FAIL (2/3)
+public health OK (recovered). Resetting fail counter.
+public health FAIL (1/3)
+public health FAIL (2/3)
+public health OK (recovered). Resetting fail counter.
+public health FAIL (1/3)
+public health FAIL (2/3)
+public health FAIL (3/3)
+tunnel process not running -> attempting start (requires origin OK).
+cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+Flask is up (health ok).
+Starting cloudflared: --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+Tunnel started. PID=19692. Wrote E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect\tunnel.pid
+public health OK (recovered). Resetting fail counter.
+
+
+
+PowerShell 7.5.4
+PS C:\Users\MAIN> cd E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> .\run_flask.ps1
+Flask already running (port 5055 LISTENING PID=2476, health ok). Adopted PID and exiting.
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> .\run_tunnel.ps1
+cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+Flask is up (health ok).
+Starting cloudflared: --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+Tunnel started. PID=4968. Wrote E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect\tunnel.pid
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:5055/health"
+
+  ok service              timestamp
+  -- -------              ---------
+True T01_handshake_server 13/01/2026 15:06:23
+
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> Invoke-RestMethod -Method Post -Uri "https://bridge.meidaledolls.com.br/health"
+
+  ok service              timestamp
+  -- -------              ---------
+True T01_handshake_server 13/01/2026 15:06:24
+
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> Get-Content .\flask.pid
+2476
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> Get-Content .\tunnel.pid
+4968
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> Get-CimInstance Win32_Process -Filter "Name='cloudflared.exe'" | Select ProcessId,CommandLine
+
+ProcessId CommandLine
+--------- -----------
+     4968 "C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Packages\Cloudflare.cloudflared_Microsoft.Winget.Source_8wekyb…
+
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> .\stop_tunnel.ps1
+Stopping cloudflared tunnel run dbb-bridge-5055 ...
+Killing PID 4968 | "C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Packages\Cloudflare.cloudflared_Microsoft.Winget.Source_8wekyb3d8bbwe\cloudflared.exe" --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+Stopped via tunnel.pid.
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> .\stop_flask.ps1
+Stopping Flask ...
+Killing PID 2476 (python)
+OK: Flask stopped (health down).
+PS E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect> .\watchdog_tunnel.ps1
+WATCHDOG START | public=https://bridge.meidaledolls.com.br/health | threshold=3 | every=20s
+public health FAIL (1/3)
+tunnel process not running -> attempting start (requires origin OK).
+origin health FAIL -> attempting run_flask.ps1
+Starting Flask: python "E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\T01_handshake_server.py"
+Flask started and port is listening. Adopted PID from port: 15120
+Flask is healthy (/health ok).
+public health FAIL (2/3)
+tunnel process not running -> attempting start (requires origin OK).
+cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+Flask is up (health ok).
+Starting cloudflared: --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+Tunnel started. PID=21076. Wrote E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect\tunnel.pid
+public health OK (recovered). Resetting fail counter.
+public health FAIL (1/3)
+public health FAIL (2/3)
+public health OK (recovered). Resetting fail counter.
+public health FAIL (1/3)
+tunnel process not running -> attempting start (requires origin OK).
+cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+Waiting for Flask health at http://127.0.0.1:5055/health (up to 60s)...
+Flask is up (health ok).
+Starting cloudflared: --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+Tunnel started. PID=3360. Wrote E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect\tunnel.pid
+public health OK (recovered). Resetting fail counter.
+public health FAIL (1/3)
+public health FAIL (2/3)
+public health FAIL (3/3)
+origin health FAIL -> starting Flask (no tunnel restart to avoid flapping).
+Starting Flask: python "E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\T01_handshake_server.py"
+Flask started and port is listening. Adopted PID from port: 8956
+Flask is healthy (/health ok).
+public health FAIL (1/3)
+public health FAIL (2/3)
+public health FAIL (3/3)
+origin health OK -> restarting tunnel.
+Stopping cloudflared tunnel run dbb-bridge-5055 ...
+Killing PID 3360 | "C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Packages\Cloudflare.cloudflared_Microsoft.Winget.Source_8wekyb3d8bbwe\cloudflared.exe" --protocol http2 --edge-ip-version 4 tunnel run dbb-bridge-5055
+Stopped via tunnel.pid.
+cloudflared resolved to: C:\Users\MAIN\AppData\Local\Microsoft\WinGet\Links\cloudflared.exe
+cloudflared tunnel already running for 'dbb-bridge-5055' (PID(s): 19692). Exiting.
+
+
+ criar a tarefa abaixo em E:\DBB_EXT\autobot_dbb_v3_VAULT\_tests_connect, com PS 7.x
+
+  $script = "E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\bridge_service.ps1"
+  $tr = '"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -WindowStyle
+  Hidden -File "' + $script + '"'
+
+  schtasks.exe /Create /TN "DBB_Bridge_Service" /SC ONLOGON /RL HIGHEST /F /TR $tr
+
+
+✔ You approved codex to run $script = "E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\bridge_service.ps1"... this time
+
+• Ran $script = "E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\bridge_service.ps1"
+  │ $pwsh = "C:\Program Files\PowerShell\7\pwsh.exe"
+  │ $tr = '"' + $pwsh + '" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $script + '"'
+  │ … +2 lines
+  └ ÊXITO: a tarefa agendada "DBB_Bridge_Service" foi criada corretamente.
+
+─ Worked for 11s ────
