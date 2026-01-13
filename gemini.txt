@@ -1,0 +1,202 @@
+Resumo da Revisão
+O código está acima da média para scripts de automação "caseiros". Você já implementou boas práticas cruciais: uso de arquivos PID, verificação de linha de comando (anti-dup), e loops de verificação de saúde.
+
+No entanto, existem riscos de robustez na detecção de portas (netstat), na resolução do executável do cloudflared e pequenos detalhes de sintaxe que podem falhar dependendo da configuração do ambiente Windows.
+
+Abaixo, apresento a análise por severidade, correções recomendadas e o guia de agendamento.
+
+1. Análise de Problemas e Riscos
+A. Severidade: Média (Robustez)
+Resolução do Caminho cloudflared.exe (run_tunnel.ps1):
+
+O script busca apenas no PATH ou no diretório do WinGet. Instalações via MSI (comuns) colocam em C:\Program Files (x86)\cloudflared\. Se o PATH do sistema não estiver atualizado, o script falha.
+
+Parsing de netstat (run_flask.ps1 / stop_flask.ps1):
+
+O comando Select-String ":5055" é arriscado. Se você tiver uma porta 50550 ou 15055, ele pode dar match falso.
+
+A extração do PID via .Split(" ")[-1] é frágil se o output do netstat mudar ligeiramente (colunas vazias).
+
+Variável $pid:
+
+Veredito: Seus scripts atuais estão seguros. Você usou corretamente $tunnelPid, $portPid, $proc.Id. O erro anterior que você mencionou ocorre se você tentar fazer $pid = ... (pois $pid é reservada). O código enviado não comete esse erro.
+
+B. Severidade: Baixa (Boas Práticas)
+Escapamento de Regex:
+
+Em Matches-TunnelRun (stop_tunnel.ps1), você usou [regex]::Escape($tunnelName). Isso é excelente.
+
+Compatibilidade PS5.1 vs PS7:
+
+Get-CimInstance: Ótima escolha (funciona em ambos, substituindo o antigo Get-WmiObject).
+
+Invoke-RestMethod -TimeoutSec: O parâmetro -TimeoutSec não existe nativamente no PowerShell 5.1 (apenas no 7). No 5.1, Invoke-RestMethod usa o timeout default do .NET (muito longo) ou exige manipulação de WebRequest.
+
+Ação: Se rodar no PS5.1, o script vai quebrar com erro de parâmetro.
+
+2. Correções Recomendadas (Patches)
+Aqui estão as versões melhoradas das funções críticas. Substitua-as nos arquivos correspondentes.
+
+Em run_tunnel.ps1 (Melhoria de Path e Compatibilidade)
+Substitua a função Resolve-CloudflaredPath por esta versão mais abrangente:
+
+PowerShell
+
+function Resolve-CloudflaredPath {
+  $candidates = @(
+    (Get-Command "cloudflared.exe" -ErrorAction SilentlyContinue).Source,
+    "$env:ProgramFiles\cloudflared\cloudflared.exe",
+    "${env:ProgramFiles(x86)}\cloudflared\cloudflared.exe",
+    "$env:LOCALAPPDATA\Microsoft\WinGet\Links\cloudflared.exe"
+  )
+  foreach ($c in $candidates) {
+    if ($c -and (Test-Path $c)) { return $c }
+  }
+  return $null
+}
+Em run_flask.ps1 e stop_flask.ps1 (Netstat Mais Seguro)
+Substitua a função Get-ListeningPid5055 por esta versão (usa regex mais estrita e parsing seguro):
+
+PowerShell
+
+function Get-ListeningPid5055() {
+    # Regex busca: TCP (espaço) IP:5055 (espaço ou fim) ... LISTENING (espaço) PID
+    $pattern = 'TCP\s+\d{1,3}(\.\d{1,3}){3}:5055\s+.*\s+LISTENING\s+(\d+)'
+
+    $netstatOut = netstat -ano | Out-String
+    # Em PS5.1/7 Select-String retorna matches globais de forma diferente,
+    # a forma abaixo é compatível e segura.
+    $matchesInText = [regex]::Matches($netstatOut, $pattern)
+
+    if ($matchesInText.Count -gt 0) {
+        # Pega o último grupo de captura (o PID) do primeiro match
+        $pidStr = $matchesInText[0].Groups[2].Value
+        return [int]$pidStr
+    }
+    return $null
+}
+Em watchdog_tunnel.ps1 (Compatibilidade de Timeout PS 5.1)
+Se você planeja rodar isso via Task Scheduler (que geralmente invoca o powershell.exe / 5.1), o parâmetro -TimeoutSec vai falhar. Use esta função Test-Health híbrida:
+
+PowerShell
+
+function Test-Health([string]$url) {
+  try {
+    # Tenta usar parâmetro do PS7, se falhar (catch), usa fallback padrão (sem timeout curto no PS5, mas funciona)
+    if ($PSVersionTable.PSVersion.Major -ge 7) {
+        $r = Invoke-RestMethod -Method Post -Uri $url -TimeoutSec 6 -ErrorAction Stop
+    } else {
+        # PS 5.1 não tem TimeoutSec nativo fácil sem criar objeto WebRequest.
+        # Aceitamos o default ou usamos .NET direto. Para simplicidade:
+        $r = Invoke-RestMethod -Method Post -Uri $url -ErrorAction Stop
+    }
+    return ($r -and $r.ok -eq $true)
+  } catch {
+    return $false
+  }
+}
+3. Orquestração e Task Scheduler
+O Arquivo bridge_service.ps1
+Seu arquivo está correto. Ele inicia os serviços em background e "trava" no watchdog. Isso é o comportamento desejado para um serviço.
+
+Como Criar a Tarefa Agendada (Cleanup + Create)
+Rode este script uma vez (como Administrador no PowerShell) para limpar lixo antigo e configurar a tarefa definitiva. Isso resolve o problema de escape e argumentos.
+
+PowerShell
+
+# Setup_Task.ps1
+$ErrorActionPreference = "Stop"
+$TaskName = "DBB_Bridge_Service"
+$ScriptPath = "E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\bridge_service.ps1"
+
+# 1. Cleanup: Remove tarefa antiga se existir
+Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+Write-Host "Tarefa antiga removida (se existia)."
+
+# 2. Definição da Ação (Usa pwsh.exe se disponível para garantir PS7, senão powershell.exe)
+# Priorizamos o pwsh (v7) pois seus scripts usam recursos do v7 (TimeoutSec).
+$PSCore = Get-Command "pwsh" -ErrorAction SilentlyContinue
+if ($PSCore) {
+    $Exe = "pwsh.exe"
+    $Arg = "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$ScriptPath`""
+    Write-Host "Configurando para usar PowerShell 7 (pwsh)."
+} else {
+    $Exe = "powershell.exe"
+    $Arg = "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$ScriptPath`""
+    Write-Host "AVISO: PowerShell 7 não detectado no PATH. Usando Windows PowerShell 5.1."
+    Write-Host "Certifique-se de aplicar o patch de compatibilidade no watchdog_tunnel.ps1."
+}
+
+$Action = New-ScheduledTaskAction -Execute $Exe -Argument $Arg
+
+# 3. Trigger: Ao fazer logon de qualquer usuário (ou System startup se preferir)
+# Para rodar sempre no boot sem login, use -AtStartup e mude o User para SYSTEM.
+# Aqui mantive Logon conforme solicitado.
+$Trigger = New-ScheduledTaskTrigger -AtLogon
+
+# 4. Settings: Prioridade alta, permitir execução on demand, não parar se bateria cair
+$Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -Priority 1 -ExecutionTimeLimit (New-TimeSpan -Days 365)
+
+# 5. Registro
+Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -User "SYSTEM" -RunLevel Highest
+
+Write-Host "Tarefa '$TaskName' registrada com sucesso rodando como SYSTEM."
+Nota Importante sobre Usuário: Configurei -User "SYSTEM" acima. Isso garante que roda em background total, sem janelas visíveis. Se precisar ver janelas para debug, troque "SYSTEM" pelo seu usuário atual (ex: $env:USERNAME), mas note que RunLevel Highest pode exigir senha dependendo da política.
+
+4. Checklist de Testes
+Siga esta ordem para validar a robustez:
+
+Limpeza Inicial:
+
+Pare qualquer python ou cloudflared manualmente.
+
+Apague a pasta logs\ e os arquivos .pid.
+
+Teste Unitário (Flask):
+
+Rode .\run_flask.ps1.
+
+Verifique se flask.pid foi criado.
+
+Verifique logs\flask_run.log.
+
+Tente rodar .\run_flask.ps1 de novo. Ele deve dizer "Adopted PID" e não abrir outro Python.
+
+Teste Unitário (Tunnel):
+
+Rode .\run_tunnel.ps1.
+
+Verifique se tunnel.pid foi criado.
+
+Verifique no Gerenciador de Tarefas se o cloudflared está rodando com os argumentos --protocol http2.
+
+Teste de Kill (Stop):
+
+Rode .\stop_flask.ps1. O Python deve sumir. O tunnel deve começar a reclamar nos logs (se você estivesse olhando), mas o processo do tunnel continua vivo.
+
+Rode .\stop_tunnel.ps1. O cloudflared deve sumir.
+
+Teste do Watchdog (Integração):
+
+Com tudo parado, rode .\bridge_service.ps1.
+
+Ele deve subir Flask e Tunnel.
+
+Acesse https://bridge.meidaledolls.com.br/health no navegador. Deve retornar true.
+
+Teste de Resiliência (Chaos Monkey):
+
+Com o watchdog rodando, mate o processo do Python pelo Gerenciador de Tarefas.
+
+Aguarde ~20-40s.
+
+O watchdog deve detectar falha no público -> checar local (falha) -> rodar run_flask.ps1.
+
+O sistema deve se curar.
+
+Mate o processo do cloudflared.
+
+O watchdog detecta falha pública -> checa local (ok) -> reinicia túnel.
+
+Conclusão
+Seu código está muito bom. As correções sugeridas são focadas em evitar "dores de cabeça" futuras com versões de PowerShell e falsos positivos de netstat. O uso do agendador como SYSTEM garantirá que o serviço rode silenciosamente no boot/logon.

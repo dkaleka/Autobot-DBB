@@ -1,0 +1,213 @@
+openapi: 3.1.0
+info:
+  title: DBB Test Connectivity (T03)
+  version: "0.1.2"
+servers:
+  - url: https://bridge.meidaledolls.com.br
+
+paths:
+  /ping:
+    post:
+      operationId: sendPing
+      summary: Connectivity test (POST only)
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                message:
+                  type: string
+                  example: "PING_T03_ACTIONS"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  received:
+                    type: string
+                    example: "PING_T03_ACTIONS"
+                  timestamp:
+                    type: string
+                    example: "2026-01-12T20:29:50Z"
+                required: [ok, timestamp]
+  /health:
+    post:
+      operationId: getHealth
+      summary: Health check (POST)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  service:
+                    type: string
+                    example: "T01_handshake_server"
+                  timestamp:
+                    type: string
+                    example: "2026-01-12T20:48:12Z"
+                required: [ok, timestamp]
+  /bridge/in:
+    post:
+      operationId: enqueueTask
+      summary: Enfileira uma tarefa (grava em queue_in)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                task_id:
+                  type: string
+                  example: "t_actions_01"
+                runner:
+                  type: string
+                  example: "ps7"
+                command:
+                  type: string
+                  example: "Get-Date"
+              required: [task_id, runner, command]
+      responses:
+        "200":
+          description: queued
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  status:
+                    type: string
+                    example: "queued"
+                  task_id:
+                    type: string
+                    example: "t_actions_01"
+                  timestamp:
+                    type: string
+                    example: "2026-01-12T20:54:52Z"
+                required: [ok, status, task_id, timestamp]
+  /bridge/out:
+    post:
+      operationId: getNextResult
+      summary: Retorna o próximo resultado (POST)
+      responses:
+        "200":
+          description: result or empty
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                properties:
+                  ok:
+                    type: boolean
+                  empty:
+                    type: boolean
+                  task_id:
+                    type: string
+                  status:
+                    type: string
+                  stdout:
+                    type: string
+                  stderr:
+                    type: string
+                  exit_code:
+                    type: integer
+                  timestamp:
+                    type: string
+
+  /bridge/process_once:
+    post:
+      operationId: processOnce
+      summary: Processa 1 item da queue_in (whitelist Get-Date)
+      responses:
+        "200":
+          description: processed/empty
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                properties:
+                  ok:
+                    type: boolean
+                  empty:
+                    type: boolean
+                  status:
+                    type: string
+                  task_id:
+                    type: string
+                  timestamp:
+                    type: string
+  /bridge/status:
+    get:
+      operationId: getBridgeStatus
+      summary: Status do bridge (fila, base_dir, timestamp)
+      responses:
+        "200":
+          description: Status do bridge
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  service: { type: string }
+                  base_dir: { type: string }
+                  queue_in: { type: integer }
+                  queue_out: { type: integer }
+                  timestamp: { type: string }
+                required: [ok, service, queue_in, queue_out, timestamp]
+  /bridge/flush:
+    post:
+      operationId: flushQueues
+      summary: Limpa filas (queue_in e/ou queue_out) — usar com cuidado
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                target:
+                  type: string
+                  enum: [in, out, both]
+              required: [target]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  ok: { type: boolean, example: true }
+                  status: { type: string, example: "flushed" }
+                  target: { type: string, enum: [in, out, both], example: "both" }
+                  removed_in: { type: integer, example: 0 }
+                  removed_out: { type: integer, example: 0 }
+                  timestamp: { type: string, example: "2026-01-13T01:44:20Z" }
+                required: [ok, status, target, timestamp]

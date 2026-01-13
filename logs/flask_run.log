@@ -1,0 +1,29 @@
+﻿2026-01-13T07:37:46Z | Flask already running (health ok). Exiting.
+2026-01-13T07:51:11Z | Flask already running (health ok). Exiting.
+2026-01-13T08:01:14Z | Flask already running (health ok). Adopted PID=19628 and wrote flask.pid. Exiting.
+2026-01-13T08:36:45Z | PID file exists but process not running. Cleaning PID file.
+2026-01-13T08:36:47Z | Starting Flask: python "E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\T01_handshake_server.py"
+2026-01-13T08:36:47Z | Flask started and port is listening. Adopted PID from port: 19872
+2026-01-13T08:36:47Z | Flask is healthy (/health ok).
+2026-01-13T09:53:55Z | Starting Flask: python "E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\T01_handshake_server.py"
+2026-01-13T09:53:56Z | Flask started and port is listening. Adopted PID from port: 5600
+2026-01-13T09:53:56Z | Flask is healthy (/health ok).
+2026-01-13T10:03:03Z | PID file exists but process not running. Cleaning PID file.
+2026-01-13T10:03:05Z | Starting Flask: python "E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\T01_handshake_server.py"
+2026-01-13T10:03:05Z | Flask started and port is listening. Adopted PID from port: 17712
+2026-01-13T10:03:05Z | Flask is healthy (/health ok).
+2026-01-13T10:08:01Z | Flask already running (port 5055 LISTENING PID=17712, health ok). Adopted PID and exiting.
+2026-01-13T14:46:11Z | Starting Flask: python "E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\T01_handshake_server.py"
+2026-01-13T14:46:11Z | Flask started and port is listening. Adopted PID from port: 2476
+2026-01-13T14:46:11Z | Flask is healthy (/health ok).
+2026-01-13T15:05:54Z | Flask already running (port 5055 LISTENING PID=2476, health ok). Adopted PID and exiting.
+2026-01-13T15:07:11Z | Starting Flask: python "E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\T01_handshake_server.py"
+2026-01-13T15:07:12Z | Flask started and port is listening. Adopted PID from port: 15120
+2026-01-13T15:07:12Z | Flask is healthy (/health ok).
+2026-01-13T15:12:15Z | Starting Flask: python "E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\T01_handshake_server.py"
+2026-01-13T15:12:16Z | Flask started and port is listening. Adopted PID from port: 3272
+2026-01-13T15:12:16Z | Flask is healthy (/health ok).
+2026-01-13T15:15:47Z | Starting Flask: python "E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\T01_handshake_server.py"
+2026-01-13T15:15:48Z | Flask started and port is listening. Adopted PID from port: 8956
+2026-01-13T15:15:48Z | Flask is healthy (/health ok).
+2026-01-13T15:22:14Z | Flask already running (port 5055 LISTENING PID=8956, health ok). Adopted PID and exiting.

@@ -1,0 +1,895 @@
+🔴 PROBLEMAS CRÍTICOS (Severidade Alta)1. Variável $PID - Conflito com variável automática do PowerShell
+Status: ✅ BOM - Nenhum script usa $pid ou $PID como variável customizada.
+
+Todos usam nomes corretos: $tunnelPid, $flaskPid, $portPid, $procId
+✅ Nenhuma correção necessária neste aspecto
+2. Race Condition em run_flask.ps1 - PID Adoption Logic
+Arquivo: run_flask.ps1 (linhas 54-63)
+Problema: Após detectar porta 5055 LISTENING, o script adota o PID e sai. Mas se dois run_flask.ps1 rodarem simultaneamente:
+
+Ambos detectam porta vazia
+Ambos iniciam python
+Segundo processo falha ao bindar porta, mas PID já foi gravado pelo primeiro
+Impacto: PID file pode apontar para processo errado ou morto.Solução:
+powershell# Após linha 88 (Start-Process)
+Start-Sleep -Milliseconds 500  # pequeno delay para processo iniciar
+
+# Verificação pós-start (substituir linhas 91-104):
+$maxRetries = 30
+for ($i = 1; $i -le $maxRetries; $i++) {
+  $portPid3 = Get-ListeningPid5055
+  if ($portPid3) {
+    # Confirma que é o processo que acabamos de iniciar
+    if ($portPid3 -eq $proc.Id) {
+      Set-Content -Path $pidFile -Value $portPid3 -Encoding ASCII
+      Log "Flask started successfully. PID=$portPid3"
+      if (HealthIsUp) {
+        Log "Flask is healthy (/health ok)."
+        exit 0
+      }
+    } else {
+      Log "ERROR: Port 5055 was claimed by different process (PID=$portPid3, expected=$($proc.Id)). Our process may have failed."
+      exit 1
+    }
+  }
+  Start-Sleep -Seconds 1
+}
+
+Log "WARN: Flask process started (PID=$($proc.Id)) but port 5055 not LISTENING after 30s."
+Set-Content -Path $pidFile -Value $proc.Id -Encoding ASCII
+exit 13. run_tunnel.ps1 - Falta validação de processo após Start-Process
+Arquivo: run_tunnel.ps1 (linha 76)
+Problema: Script inicia cloudflared e imediatamente grava PID, mas não valida se o processo realmente iniciou ou pode ter crashado imediatamente.Solução:
+powershell# Após linha 76, antes do Set-Content:
+Start-Sleep -Milliseconds 500
+
+try {
+  $checkProc = Get-Process -Id $p.Id -ErrorAction Stop
+  Set-Content -Path $tunnelPidFile -Value $p.Id -Encoding ASCII
+  Log "Tunnel started. PID=$($p.Id). Wrote $tunnelPidFile"
+} catch {
+  Log "ERROR: cloudflared process died immediately after start. Check credentials/config."
+  exit 1
+}🟠 PROBLEMAS IMPORTANTES (Severidade Média)4. Regex em stop_tunnel.ps1 e run_tunnel.ps1 - Escape incompleto
+Arquivos: stop_tunnel.ps1 (linha 23), run_tunnel.ps1 (linha 36)
+Problema: Regex usa \btunnel\s+run\s+ mas não valida presença de flags antes/depois.Cenário de falha:
+cloudflared tunnel --config /path run dbb-bridge-5055 --another-flag
+Esse comando seria detectado, mas se houver:
+cloudflared tunnel run dbb-bridge-5055-test
+Também seria detectado (falso positivo).Solução:
+powershellfunction Matches-TunnelRun([string]$cmdline) {
+  # Aceita: tunnel run dbb-bridge-5055 (com ou sem flags antes/depois)
+  # Rejeita: dbb-bridge-5055-test, dbb-bridge-50551, etc
+  $rx = "(?i)\btunnel\s+run\s+$([regex]::Escape($tunnelName))(\s|$)"
+  return ($cmdline -match $rx)
+}
+Adicionar (\s|$) garante que o nome do túnel termina com espaço ou fim de string.5. watchdog_tunnel.ps1 - Lógica de recuperação pode causar flap
+Arquivo: watchdog_tunnel.ps1 (linhas 52-60)
+Problema: Se túnel morrer, watchdog tenta subir imediatamente. Se origin também cair logo depois, pode criar ciclo:
+
+Túnel morre → watchdog detecta
+Sobe túnel (origin OK naquele momento)
+Origin cai 2s depois
+Túnel fica logando erros mas rodando
+Public health falha → watchdog reinicia túnel
+Loop de reinicializações
+Solução:
+powershell# Adicionar após linha 52:
+if (-not (Tunnel-Running)) {
+  Log "tunnel process not running -> checking origin first."
+
+  # Tenta recuperar origin primeiro (se necessário)
+  $originOk = Test-Health $originHealth
+  if (-not $originOk) {
+    Log "origin health FAIL -> attempting run_flask.ps1"
+    & (Join-Path $baseDir "run_flask.ps1") | Out-Null
+    Start-Sleep -Seconds 5  # aguarda Flask estabilizar
+
+    # Re-checa origin
+    $originOk = Test-Health $originHealth
+    if (-not $originOk) {
+      Log "origin still down after Flask restart. Will retry next cycle."
+      Start-Sleep -Seconds $everySec
+      continue
+    }
+  }
+
+  Log "origin health OK -> attempting tunnel start."
+  & (Join-Path $baseDir "run_tunnel.ps1") | Out-Null
+  $fails = 0
+  Start-Sleep -Seconds $everySec
+  continue
+}6. Compatibilidade PS5.1 - -Encoding ASCII vs UTF8
+Todos os PID files usam:
+powershellSet-Content -Path $pidFile -Value $proc.Id -Encoding ASCIIProblema: ASCII não é necessário (PIDs são números) e pode causar confusão. UTF8 é padrão em PS7 mas não em PS5.1.Solução (melhor prática):
+powershell# Use UTF8 sem BOM (compatível com ambos):
+[System.IO.File]::WriteAllText($pidFile, "$($proc.Id)", [System.Text.UTF8Encoding]::new($false))
+
+# OU mais simples (funciona em ambos):
+Set-Content -Path $pidFile -Value $proc.Id -Encoding UTF8 -NoNewline🟡 MELHORIAS RECOMENDADAS (Severidade Baixa)7. Logs - Adicionar contexto de erro em catches
+Vários catch {} silenciosos que dificultam debug. Exemplo em stop_flask.ps1 (linha 33):
+powershell# ANTES:
+} catch {}
+
+# DEPOIS:
+} catch {
+  Log "WARN: netstat parse failed: $($_.Exception.Message)"
+}8. Get-ListeningPid5055 - Parsing frágil
+Arquivo: run_flask.ps1 e stop_flask.ps1
+Problema: Regex \s+ pode falhar em locales diferentes ou outputs variados de netstat.Solução (mais robusta):
+powershellfunction Get-ListeningPid5055() {
+  try {
+    $lines = netstat -ano | Select-String "127.0.0.1:5055" | Select-String "LISTENING"
+    foreach ($line in $lines) {
+      # Parse flexível: pega último token numérico
+      if ($line -match '\s+(\d+)\s*$') {
+        return [int]$matches[1]
+      }
+    }
+  } catch {
+    Log "WARN: Failed to parse netstat: $($_.Exception.Message)"
+  }
+  return $null
+}9. bridge_service.ps1 - Falta tratamento de erro
+Arquivo: bridge_service.ps1
+Problema: Se run_flask.ps1 ou run_tunnel.ps1 falharem, o script continua para watchdog.Solução:
+powershellLog "BRIDGE SERVICE START"
+
+Log "Starting Flask..."
+$flaskResult = & (Join-Path $baseDir "run_flask.ps1")
+if ($LASTEXITCODE -ne 0) {
+  Log "ERROR: Flask startup failed. Exit code: $LASTEXITCODE"
+  exit 1
+}
+
+Log "Starting Tunnel..."
+$tunnelResult = & (Join-Path $baseDir "run_tunnel.ps1")
+if ($LASTEXITCODE -ne 0) {
+  Log "ERROR: Tunnel startup failed. Exit code: $LASTEXITCODE"
+  exit 1
+}
+
+Log "Starting Watchdog (will block)..."
+& (Join-Path $baseDir "watchdog_tunnel.ps1")10. Hardcoded paths em run_flask.ps1 e stop_flask.ps1
+powershell$baseDir  = "E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT"
+Use $PSScriptRoot como nos outros scripts:
+powershell$baseDir = $PSScriptRoot🔵 OBSERVAÇÕES DE SEGURANÇA11. PID Recycling - Já tratado corretamente! ✅
+Todos os scripts validam que o PID pertence ao processo correto (via CommandLine ou porta). Excelente trabalho!12. Falta timeout global em watchdog_tunnel.ps1
+Watchdog roda infinito. Se houver problema persistente, pode logar indefinidamente. Considere adicionar um "circuit breaker":powershell$consecutiveErrors = 0
+$maxConsecutiveErrors = 50
+
+while ($true) {
+  # ... lógica atual ...
+
+  if ($fails -gt 0) {
+    $consecutiveErrors++
+    if ($consecutiveErrors -ge $maxConsecutiveErrors) {
+      Log "CRITICAL: $maxConsecutiveErrors consecutive failures. Stopping watchdog for manual intervention."
+      exit 1
+    }
+  } else {
+    $consecutiveErrors = 0
+  }
+}📝 COMANDOS TASK SCHEDULER (PowerShell - não CMD)Criar tarefa (PowerShell 7 - terminal preto):
+powershell# Limpar tarefas antigas primeiro
+Get-ScheduledTask -TaskName "*bridge*" -ErrorAction SilentlyContinue | Unregister-ScheduledTask -Confirm:$false
+
+# Criar nova tarefa
+$action = New-ScheduledTaskAction -Execute "pwsh.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\bridge_service.ps1`""
+
+$trigger = New-ScheduledTaskTrigger -AtLogOn
+
+$principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Highest
+
+$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+
+Register-ScheduledTask -TaskName "DBB_Bridge_Service" -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description "Auto-start Flask + Cloudflare Tunnel watchdog"Criar tarefa (PowerShell 5.1 - para compatibilidade com Task Scheduler):
+powershell# Usar powershell.exe em vez de pwsh.exe
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"E:\DBB_EXT\AUTOBOT_DBB_V3_VAULT\_TESTS_CONNECT\bridge_service.ps1`""
+
+# ... resto igual ...Cleanup de tarefas antigas:
+powershell# Listar todas relacionadas
+Get-ScheduledTask | Where-Object {$_.TaskName -like "*bridge*" -or $_.TaskName -like "*tunnel*" -or $_.TaskName -like "*flask*"}
+
+# Remover todas
+Get-ScheduledTask | Where-Object {$_.TaskName -like "*bridge*" -or $_.TaskName -like "*tunnel*"} | Unregister-ScheduledTask -Confirm:$false✅ CHECKLIST DE TESTESTestes Unitários (por script):run_flask.ps1
+
+ Porta 5055 vazia → Flask sobe → PID correto gravado
+ Porta 5055 ocupada (Flask rodando) → Script adota PID → Não inicia duplicado
+ PID file existe mas processo morto → Script limpa e inicia novo
+ PID file corrompido (texto inválido) → Script limpa e inicia
+ Dois run_flask.ps1 simultâneos → Apenas um Flask ativo
+stop_flask.ps1
+
+ Flask rodando com PID file válido → Para corretamente
+ Flask rodando sem PID file → Para via netstat
+ PID file aponta para processo errado → Usa netstat, não mata errado
+ Flask não rodando → Script sai sem erro
+run_tunnel.ps1
+
+ cloudflared não encontrado → Script aborta com erro claro
+ Flask não responde /health → Script aborta sem subir túnel
+ Túnel já rodando → Script detecta e sai (não duplica)
+ Túnel sobe com http2+ipv4 → PID gravado, logs corretos
+stop_tunnel.ps1
+
+ Túnel rodando (PID file válido) → Para apenas esse túnel
+ Múltiplos cloudflared rodando → Para apenas dbb-bridge-5055
+ Túnel não rodando → Script sai sem erro
+watchdog_tunnel.ps1
+
+ Public health OK → Watchdog monitora sem ação
+ Public health fail, origin OK → Reinicia túnel
+ Public health fail, origin fail → Tenta subir Flask, não reinicia túnel
+ Túnel morre (processo) → Detecta e reinicia (se origin OK)
+ 50 falhas consecutivas → Circuit breaker para watchdog
+Testes Integrados:Startup completo
+powershell# 1. Ambiente limpo
+.\stop_flask.ps1
+.\stop_tunnel.ps1
+Start-Sleep -Seconds 2
+
+# 2. Start via bridge_service
+.\bridge_service.ps1
+
+# 3. Verificar logs
+Get-Content .\logs\bridge_service.log -Tail 20
+Get-Content .\logs\flask_run.log -Tail 10
+Get-Content .\logs\tunnel_run.log -Tail 10
+
+# 4. Testar endpoints
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:5055/health"
+Invoke-RestMethod -Method Post -Uri "https://bridge.meidaledolls.com.br/health"Simulação de falha (origin down)
+powershell# 1. Tudo rodando
+# 2. Matar Flask manualmente
+Get-Process python | Where-Object {(Get-NetTCPConnection -OwningProcess $_.Id).LocalPort -eq 5055} | Stop-Process -Force
+
+# 3. Aguardar watchdog detectar (20s + threshold)
+Start-Sleep -Seconds 70
+
+# 4. Verificar logs do watchdog
+Get-Content .\logs\tunnel_watchdog.log -Tail 30
+
+# Esperado: watchdog tentou subir Flask, não reiniciou túnel em loopSimulação de falha (tunnel crash)
+powershell# 1. Matar cloudflared
+Get-Process cloudflared | Stop-Process -Force
+
+# 2. Aguardar watchdog (20s)
+Start-Sleep -Seconds 25
+
+# 3. Verificar túnel voltou
+Get-Process cloudflared
+Invoke-RestMethod -Method Post -Uri "https://bridge.meidaledolls.com.br/health"📊 COMPATIBILIDADE PS5.1 vs PS7FeaturePS5.1PS7StatusGet-CimInstance✅✅OKStart-Process -PassThru✅✅OK-Encoding UTF8✅✅OK-ErrorAction Stop✅✅OKRegex (?i)✅✅OKJoin-Path✅✅OK$PSScriptRoot✅✅OK✅ Todos os scripts são compatíveis com ambas as versões (após correções sugeridas).Único ponto de atenção: Task Scheduler deve usar powershell.exe (PS5.1) se os scripts forem executados em contexto de sistema. Se usar conta de usuário interativa com PS7 instalado, pode usar pwsh.exe.
+
+
+
+
+
+
+
+# run_flask.ps1 (CORRIGIDO)
+$ErrorActionPreference = "Stop"
+
+$baseDir   = $PSScriptRoot  # FIXADO: era hardcoded
+$pyScript  = Join-Path $baseDir "T01_handshake_server.py"
+
+$logDir    = Join-Path $baseDir "logs"
+$logFile   = Join-Path $logDir "flask_run.log"
+$pidFile   = Join-Path $baseDir "flask.pid"
+
+$healthUrl = "http://127.0.0.1:5055/health"
+
+function Log([string]$msg) {
+  if (!(Test-Path $logDir)) { New-Item -ItemType Directory -Force -Path $logDir | Out-Null }
+  $line = ("{0} | {1}" -f ([DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")), $msg)
+  Add-Content -Path $logFile -Value $line -Encoding UTF8
+  Write-Host $msg
+}
+
+function Get-ListeningPid5055() {
+  try {
+    # FIXADO: parsing mais robusto
+    $lines = netstat -ano | Select-String "127.0.0.1:5055" | Select-String "LISTENING"
+    foreach ($line in $lines) {
+      if ($line -match '\s+(\d+)\s*$') {
+        return [int]$matches[1]
+      }
+    }
+  } catch {
+    Log "WARN: Failed to parse netstat: $($_.Exception.Message)"
+  }
+  return $null
+}
+
+function HealthIsUp() {
+  try {
+    $r = Invoke-RestMethod -Method Post -Uri $healthUrl -TimeoutSec 2
+    return ($r.ok -eq $true)
+  } catch {
+    return $false
+  }
+}
+
+function Wait-Health([int]$maxTries = 30, [int]$sleepSec = 1) {
+  for ($i=1; $i -le $maxTries; $i++) {
+    if (HealthIsUp) { return $true }
+    Start-Sleep -Seconds $sleepSec
+  }
+  return $false
+}
+
+# 0) Se a porta 5055 já está LISTENING, adota e sai
+$portPid = Get-ListeningPid5055
+if ($portPid) {
+  [System.IO.File]::WriteAllText($pidFile, "$portPid", [System.Text.UTF8Encoding]::new($false))
+  if (HealthIsUp) {
+    Log "Flask already running (port 5055 LISTENING PID=$portPid, health ok). Adopted PID and exiting."
+  } else {
+    Log "WARN: port 5055 LISTENING PID=$portPid but /health not responding yet. Adopted PID and exiting."
+  }
+  exit 0
+}
+
+# 1) Se existe PID file, valida
+if (Test-Path $pidFile) {
+  $raw = (Get-Content $pidFile -ErrorAction SilentlyContinue | Select-Object -First 1)
+  $raw = if ($raw) { $raw.Trim() } else { "" }
+
+  if ($raw -match '^\d+$') {
+    $flaskPid = [int]$raw
+    try {
+      $p = Get-Process -Id $flaskPid -ErrorAction Stop
+      Log "PID file exists (PID=$flaskPid) but port 5055 is not listening. Cleaning PID file (stale)."
+      Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
+    } catch {
+      Log "PID file exists but process not running. Cleaning PID file."
+      Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
+    }
+  } else {
+    Log "Invalid PID file content. Cleaning."
+    Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
+  }
+}
+
+# 2) Última checagem: se /health responde sem porta detectada
+if (HealthIsUp) {
+  $portPid2 = Get-ListeningPid5055
+  if ($portPid2) {
+    [System.IO.File]::WriteAllText($pidFile, "$portPid2", [System.Text.UTF8Encoding]::new($false))
+    Log "Flask already running (health ok). Adopted PID=$portPid2 and exiting."
+    exit 0
+  }
+  Log "Flask health ok but could not resolve PID from port 5055. Exiting without pid."
+  exit 0
+}
+
+# 3) Sobe Flask
+Log "Starting Flask: python `"$pyScript`""
+$proc = Start-Process -FilePath "python" -ArgumentList "`"$pyScript`"" -WorkingDirectory $baseDir -PassThru -WindowStyle Hidden
+
+# FIXADO: aguarda processo iniciar
+Start-Sleep -Milliseconds 500
+
+# 4) Valida que processo iniciou e porta está LISTENING
+$maxRetries = 30
+$success = $false
+
+for ($i = 1; $i -le $maxRetries; $i++) {
+  $portPid3 = Get-ListeningPid5055
+
+  if ($portPid3) {
+    # Confirma que é o processo que iniciamos
+    if ($portPid3 -eq $proc.Id) {
+      [System.IO.File]::WriteAllText($pidFile, "$portPid3", [System.Text.UTF8Encoding]::new($false))
+      Log "Flask started successfully. PID=$portPid3"
+
+      if (HealthIsUp) {
+        Log "Flask is healthy (/health ok)."
+        $success = $true
+        break
+      } else {
+        Log "Flask port is listening but /health not responding yet (try $i/$maxRetries)."
+      }
+    } else {
+      Log "ERROR: Port 5055 was claimed by different process (PID=$portPid3, expected=$($proc.Id)). Our process may have failed."
+      exit 1
+    }
+  }
+
+  Start-Sleep -Seconds 1
+}
+
+if (-not $success) {
+  Log "ERROR: Flask did not become healthy within 30s. Check python/flask logs."
+  exit 1
+}
+
+exit 0
+
+
+
+
+
+# stop_flask.ps1 (CORRIGIDO)
+$ErrorActionPreference = "Stop"
+
+$baseDir  = $PSScriptRoot  # FIXADO: era hardcoded
+$pidFile  = Join-Path $baseDir "flask.pid"
+
+$logDir  = Join-Path $baseDir "logs"
+$logFile = Join-Path $logDir "flask_stop.log"
+
+$healthUrl = "http://127.0.0.1:5055/health"
+
+function Log([string]$msg) {
+  if (!(Test-Path $logDir)) { New-Item -ItemType Directory -Force -Path $logDir | Out-Null }
+  $line = ("{0} | {1}" -f ([DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")), $msg)
+  Add-Content -Path $logFile -Value $line -Encoding UTF8
+  Write-Host $msg
+}
+
+function Get-ListeningPid5055() {
+  try {
+    # FIXADO: parsing mais robusto
+    $lines = netstat -ano | Select-String "127.0.0.1:5055" | Select-String "LISTENING"
+    foreach ($line in $lines) {
+      if ($line -match '\s+(\d+)\s*$') {
+        return [int]$matches[1]
+      }
+    }
+  } catch {
+    Log "WARN: Failed to parse netstat: $($_.Exception.Message)"
+  }
+  return $null
+}
+
+function HealthIsUp() {
+  try {
+    Invoke-RestMethod -Method Post -Uri $healthUrl -TimeoutSec 2 | Out-Null
+    return $true
+  } catch {
+    return $false
+  }
+}
+
+Log "Stopping Flask ..."
+
+# 0) Descobre quem está na porta (referência)
+$portPid = Get-ListeningPid5055
+
+# 1) Tenta PID file (mas valida contra a porta 5055)
+if (Test-Path $pidFile) {
+  $flaskPidRaw = (Get-Content $pidFile -ErrorAction SilentlyContinue | Select-Object -First 1)
+  $flaskPidRaw = if ($flaskPidRaw) { $flaskPidRaw.Trim() } else { "" }
+
+  if ($flaskPidRaw -match '^\d+$') {
+    $flaskPid = [int]$flaskPidRaw
+
+    # Se existir PID na porta e for diferente, NÃO mata pelo pidfile
+    if ($portPid -and ($portPid -ne $flaskPid)) {
+      Log ("PID file says {0} but port 5055 is LISTENING on {1}. Using port PID." -f $flaskPid, $portPid)
+      $flaskPid = $portPid
+    }
+
+    try {
+      $p = Get-Process -Id $flaskPid -ErrorAction Stop
+      Log ("Killing PID {0} ({1})" -f $p.Id, $p.ProcessName)
+      Stop-Process -Id $p.Id -Force
+      Start-Sleep -Milliseconds 300
+
+      # limpa pidfile sempre
+      Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
+
+      if (HealthIsUp) {
+        Log "WARN: /health still responds after kill (unexpected)."
+      } else {
+        Log "OK: Flask stopped (health down)."
+      }
+      exit 0
+    } catch {
+      Log "PID file exists but process is not running. Cleaning PID file."
+      Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
+    }
+  } else {
+    Log "Invalid PID file content. Cleaning."
+    Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
+  }
+}
+
+# 2) Fallback: mata quem estiver LISTENING na porta 5055
+if ($portPid) {
+  try {
+    $p = Get-Process -Id $portPid -ErrorAction Stop
+    Log ("Killing PID {0} ({1}) [port 5055 LISTENING]" -f $p.Id, $p.ProcessName)
+    Stop-Process -Id $p.Id -Force
+    Start-Sleep -Milliseconds 300
+
+    Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
+
+    if (HealthIsUp) {
+      Log "WARN: /health still responds after kill (unexpected)."
+    } else {
+      Log "OK: Flask stopped (health down)."
+    }
+    exit 0
+  } catch {
+    Log ("Found port PID {0} but could not kill it. Error: {1}" -f $portPid, $_.Exception.Message)
+    exit 1
+  }
+}
+
+Log "No matching Flask process found."
+exit 0
+
+
+
+
+
+
+
+
+# run_tunnel.ps1 (CORRIGIDO)
+$ErrorActionPreference = "Stop"
+
+$baseDir = $PSScriptRoot
+$logDir  = Join-Path $baseDir "logs"
+$logFile = Join-Path $logDir "tunnel_run.log"
+$tunnelPidFile = Join-Path $baseDir "tunnel.pid"
+
+$tunnelName   = "dbb-bridge-5055"
+$originHealth = "http://127.0.0.1:5055/health"
+
+$maxWaitFlaskSeconds = 60
+$pollEverySeconds    = 2
+
+function Log([string]$msg) {
+  if (!(Test-Path $logDir)) { New-Item -ItemType Directory -Force -Path $logDir | Out-Null }
+  $line = ("{0} | {1}" -f ([DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")), $msg)
+  Add-Content -Path $logFile -Value $line -Encoding UTF8
+  Write-Host $msg
+}
+
+function Resolve-CloudflaredPath {
+  $cmd = Get-Command "cloudflared.exe" -ErrorAction SilentlyContinue
+  if ($cmd -and $cmd.Source -and (Test-Path $cmd.Source)) { return $cmd.Source }
+
+  $fallback = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links\cloudflared.exe"
+  if (Test-Path $fallback) { return $fallback }
+
+  return $null
+}
+
+function Get-TunnelRunProcesses {
+  # FIXADO: adiciona (\s|$) para evitar falso positivo com dbb-bridge-5055-test
+  $rx = "(?i)\btunnel\s+run\s+$([regex]::Escape($tunnelName))(\s|$)"
+  Get-CimInstance Win32_Process -Filter "Name='cloudflared.exe'" |
+    Where-Object { $_.CommandLine -match $rx }
+}
+
+$cloudflaredExe = Resolve-CloudflaredPath
+if (!$cloudflaredExe) {
+  Log "ERROR: cloudflared.exe not found in PATH and not found in WinGet Links. Aborting."
+  exit 1
+}
+Log "cloudflared resolved to: $cloudflaredExe"
+
+# 1) Anti-dup forte (somente pro tunnelName)
+$running = Get-TunnelRunProcesses
+if ($running) {
+  $pids = ($running | Select-Object -ExpandProperty ProcessId) -join ","
+  Log "cloudflared tunnel already running for '$tunnelName' (PID(s): $pids). Exiting."
+  exit 0
+}
+
+# 2) Espera Flask ficar OK
+$maxTries = [Math]::Ceiling($maxWaitFlaskSeconds / $pollEverySeconds)
+Log "Waiting for Flask health at $originHealth (up to ${maxWaitFlaskSeconds}s)..."
+
+$flaskOk = $false
+for ($i=1; $i -le $maxTries; $i++) {
+  try {
+    $r = Invoke-RestMethod -Method Post -Uri $originHealth -TimeoutSec 2
+    if ($r -and $r.ok -eq $true) { $flaskOk = $true; break }
+  } catch {
+    # Silencioso durante polling, mas última tentativa loga
+    if ($i -eq $maxTries) {
+      Log "ERROR: Flask health check failed: $($_.Exception.Message)"
+    }
+  }
+  Start-Sleep -Seconds $pollEverySeconds
+}
+
+if (!$flaskOk) {
+  Log "ERROR: Flask health did not respond in time. Aborting tunnel start."
+  exit 1
+}
+Log "Flask is up (health ok)."
+
+# 3) Start tunnel (http2 + ipv4) em background, grava PID
+$argList = "--protocol http2 --edge-ip-version 4 tunnel run $tunnelName"
+Log "Starting cloudflared: $argList"
+
+$p = Start-Process -FilePath $cloudflaredExe -ArgumentList $argList -WorkingDirectory $baseDir -PassThru -WindowStyle Hidden
+
+# FIXADO: valida que processo realmente iniciou
+Start-Sleep -Milliseconds 500
+
+try {
+  $checkProc = Get-Process -Id $p.Id -ErrorAction Stop
+  [System.IO.File]::WriteAllText($tunnelPidFile, "$($p.Id)", [System.Text.UTF8Encoding]::new($false))
+  Log "Tunnel started. PID=$($p.Id). Wrote $tunnelPidFile"
+} catch {
+  Log "ERROR: cloudflared process died immediately after start. Check credentials/config."
+  exit 1
+}
+
+exit 0
+
+
+
+
+
+
+
+
+
+# stop_tunnel.ps1 (CORRIGIDO)
+$ErrorActionPreference = "Stop"
+
+$baseDir = $PSScriptRoot
+$logDir  = Join-Path $baseDir "logs"
+$logFile = Join-Path $logDir "tunnel_stop.log"
+$tunnelPidFile = Join-Path $baseDir "tunnel.pid"
+
+$tunnelName = "dbb-bridge-5055"
+
+function Log([string]$msg) {
+  if (!(Test-Path $logDir)) { New-Item -ItemType Directory -Force -Path $logDir | Out-Null }
+  $line = ("{0} | {1}" -f ([DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")), $msg)
+  Add-Content -Path $logFile -Value $line -Encoding UTF8
+  Write-Host $msg
+}
+
+function Matches-TunnelRun([string]$cmdline) {
+  # FIXADO: adiciona (\s|$) para evitar falso positivo
+  $rx = "(?i)\btunnel\s+run\s+$([regex]::Escape($tunnelName))(\s|$)"
+  return ($cmdline -match $rx)
+}
+
+function Get-TunnelRunProcesses {
+  Get-CimInstance Win32_Process -Filter "Name='cloudflared.exe'" |
+    Where-Object { Matches-TunnelRun $_.CommandLine }
+}
+
+Log "Stopping cloudflared tunnel run $tunnelName ..."
+
+# 1) Preferência: PID file (se existir)
+if (Test-Path $tunnelPidFile) {
+  $pidText = (Get-Content $tunnelPidFile -ErrorAction SilentlyContinue | Select-Object -First 1).Trim()
+  if ($pidText -match '^\d+$') {
+    $tunnelProcId = [int]$pidText
+    try {
+      $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$tunnelProcId" -ErrorAction Stop
+      if ($proc -and $proc.Name -ieq "cloudflared.exe" -and (Matches-TunnelRun $proc.CommandLine)) {
+        Log ("Killing PID {0} | {1}" -f $proc.ProcessId, $proc.CommandLine)
+        Stop-Process -Id $proc.ProcessId -Force
+        Remove-Item $tunnelPidFile -Force -ErrorAction SilentlyContinue
+        Log "Stopped via tunnel.pid."
+        exit 0
+      } else {
+        Log "tunnel.pid points to a process that is not the target tunnel. Cleaning tunnel.pid."
+        Remove-Item $tunnelPidFile -Force -ErrorAction SilentlyContinue
+      }
+    } catch {
+      Log "tunnel.pid exists but process not running. Cleaning tunnel.pid."
+      Remove-Item $tunnelPidFile -Force -ErrorAction SilentlyContinue
+    }
+  } else {
+    Log "Invalid tunnel.pid content. Cleaning."
+    Remove-Item $tunnelPidFile -Force -ErrorAction SilentlyContinue
+  }
+}
+
+# 2) Fallback: mata por CommandLine (somente o tunnelName)
+$matches = Get-TunnelRunProcesses
+if (!$matches) {
+  Log "No matching cloudflared tunnel run process found for tunnel '$tunnelName'. Nothing to stop."
+  exit 0
+}
+
+$killed = 0
+foreach ($m in $matches) {
+  try {
+    Log ("Killing PID {0} | {1}" -f $m.ProcessId, $m.CommandLine)
+    Stop-Process -Id $m.ProcessId -Force
+    $killed++
+  } catch {
+    Log ("Failed to kill PID {0}: {1}" -f $m.ProcessId, $_.Exception.Message)
+  }
+}
+
+Log ("Stopped {0} cloudflared process(es)." -f $killed)
+exit 0
+
+
+
+
+
+
+
+# watchdog_tunnel.ps1 (CORRIGIDO)
+$ErrorActionPreference = "Stop"
+
+$baseDir = $PSScriptRoot
+$logDir  = Join-Path $baseDir "logs"
+$logFile = Join-Path $logDir "tunnel_watchdog.log"
+
+$publicHealth = "https://bridge.meidaledolls.com.br/health"
+$originHealth = "http://127.0.0.1:5055/health"
+
+$threshold = 3
+$everySec  = 20
+
+# NOVO: Circuit breaker para evitar loops infinitos
+$maxConsecutiveErrors = 50
+$consecutiveErrors = 0
+
+function Log([string]$msg) {
+  if (!(Test-Path $logDir)) { New-Item -ItemType Directory -Force -Path $logDir | Out-Null }
+  $line = ("{0} | {1}" -f ([DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")), $msg)
+  Add-Content -Path $logFile -Value $line -Encoding UTF8
+  Write-Host $msg
+}
+
+function Test-Health([string]$url) {
+  try {
+    $r = Invoke-RestMethod -Method Post -Uri $url -TimeoutSec 6
+    return ($r -and $r.ok -eq $true)
+  } catch {
+    return $false
+  }
+}
+
+function Tunnel-Running {
+  # FIXADO: adiciona (\s|$) para evitar falso positivo
+  $rx = "(?i)\btunnel\s+run\s+dbb-bridge-5055(\s|$)"
+  $p = Get-CimInstance Win32_Process -Filter "Name='cloudflared.exe'" |
+        Where-Object { $_.CommandLine -match $rx } |
+        Select-Object -First 1
+  return [bool]$p
+}
+
+Log "WATCHDOG START | public=$publicHealth | threshold=$threshold | every=${everySec}s"
+
+$fails = 0
+while ($true) {
+  $pubOk = Test-Health $publicHealth
+
+  if ($pubOk) {
+    if ($fails -gt 0) {
+      Log "public health OK (recovered). Resetting fail counter."
+    }
+    $fails = 0
+    $consecutiveErrors = 0  # FIXADO: reseta circuit breaker
+  } else {
+    $fails++
+    $consecutiveErrors++  # NOVO: incrementa circuit breaker
+    Log "public health FAIL ($fails/$threshold) [consecutive errors: $consecutiveErrors/$maxConsecutiveErrors]"
+
+    # NOVO: Circuit breaker
+    if ($consecutiveErrors -ge $maxConsecutiveErrors) {
+      Log "CRITICAL: $maxConsecutiveErrors consecutive failures. Stopping watchdog for manual intervention."
+      exit 1
+    }
+
+    # FIXADO: lógica de recuperação melhorada
+    # Se o tunnel morreu (processo), tenta subir (mas valida origin primeiro)
+    if (-not (Tunnel-Running)) {
+      Log "tunnel process not running -> checking origin first."
+
+      # Tenta recuperar origin primeiro (se necessário)
+      $originOk = Test-Health $originHealth
+      if (-not $originOk) {
+        Log "origin health FAIL -> attempting run_flask.ps1"
+        & (Join-Path $baseDir "run_flask.ps1") | Out-Null
+        Start-Sleep -Seconds 5  # aguarda Flask estabilizar
+
+        # Re-checa origin
+        $originOk = Test-Health $originHealth
+        if (-not $originOk) {
+          Log "origin still down after Flask restart. Will retry next cycle."
+          Start-Sleep -Seconds $everySec
+          continue
+        }
+      }
+
+      Log "origin health OK -> attempting tunnel start."
+      & (Join-Path $baseDir "run_tunnel.ps1") | Out-Null
+      $fails = 0
+      Start-Sleep -Seconds $everySec
+      continue
+    }
+
+    # Se atingiu threshold e túnel está rodando
+    if ($fails -ge $threshold) {
+      $originOk = Test-Health $originHealth
+      if (-not $originOk) {
+        Log "origin health FAIL -> starting Flask (no tunnel restart to avoid flapping)."
+        & (Join-Path $baseDir "run_flask.ps1") | Out-Null
+        $fails = 0
+      } else {
+        Log "origin health OK -> restarting tunnel."
+        & (Join-Path $baseDir "stop_tunnel.ps1") | Out-Null
+        Start-Sleep -Seconds 2
+        & (Join-Path $baseDir "run_tunnel.ps1") | Out-Null
+        $fails = 0
+      }
+    }
+  }
+
+  Start-Sleep -Seconds $everySec
+}
+
+
+
+
+
+# bridge_service.ps1 (CORRIGIDO)
+$ErrorActionPreference = "Stop"
+
+$baseDir = $PSScriptRoot
+$logDir  = Join-Path $baseDir "logs"
+$logFile = Join-Path $logDir "bridge_service.log"
+
+function Log([string]$msg) {
+  if (!(Test-Path $logDir)) { New-Item -ItemType Directory -Force -Path $logDir | Out-Null }
+  $line = ("{0} | {1}" -f ([DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")), $msg)
+  Add-Content -Path $logFile -Value $line -Encoding UTF8
+  Write-Host $msg
+}
+
+Log "BRIDGE SERVICE START"
+
+# FIXADO: valida exit codes dos subscripts
+Log "Starting Flask..."
+& (Join-Path $baseDir "run_flask.ps1")
+if ($LASTEXITCODE -ne 0) {
+  Log "ERROR: Flask startup failed. Exit code: $LASTEXITCODE"
+  exit 1
+}
+
+Log "Starting Tunnel..."
+& (Join-Path $baseDir "run_tunnel.ps1")
+if ($LASTEXITCODE -ne 0) {
+  Log "ERROR: Tunnel startup failed. Exit code: $LASTEXITCODE"
+  exit 1
+}
+
+Log "Starting Watchdog (will block)..."
+& (Join-Path $baseDir "watchdog_tunnel.ps1")
+
+# Se watchdog sair (erro crítico ou circuit breaker)
+Log "BRIDGE SERVICE STOPPED (watchdog exited with code: $LASTEXITCODE)"
+exit $LASTEXITCODE
+
+
+
+
+
+
+📌 RESUMO FINAL
+Problemas Encontrados: 12 issues
+
+Críticos (3): Race condition, validação de processo, conflito de regex
+Importantes (3): Lógica de flap, encoding, erro silencioso
+Melhorias (6): Parsing, logs, hardcoded paths, circuit breaker
+
+Arquivos Corrigidos: 6 scripts
+Todos os artifacts acima contêm as correções implementadas.
+Compatibilidade: ✅ 100% PS5.1 e PS7
+Próximos Passos:
+
+Substituir scripts pelos corrigidos
+Executar checklist de testes (seção anterior)
+Configurar Task Scheduler com comandos fornecidos
+Monitorar logs nas primeiras 24h

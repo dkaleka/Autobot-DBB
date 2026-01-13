@@ -1,0 +1,54 @@
+2026-01-13T10:05:00Z | WATCHDOG START | public=https://bridge.meidaledolls.com.br/health | threshold=3 | every=20s
+2026-01-13T10:08:40Z | WATCHDOG START | public=https://bridge.meidaledolls.com.br/health | threshold=3 | every=20s
+2026-01-13T10:10:24Z | public health FAIL (1/3)
+2026-01-13T10:10:44Z | public health FAIL (2/3)
+2026-01-13T10:11:04Z | public health FAIL (3/3)
+2026-01-13T10:11:06Z | origin health FAIL too -> NOT restarting tunnel (would flap). Waiting...
+2026-01-13T10:11:27Z | public health FAIL (1/3)
+2026-01-13T10:11:47Z | public health FAIL (2/3)
+2026-01-13T10:12:07Z | public health FAIL (3/3)
+2026-01-13T10:12:09Z | origin health FAIL too -> NOT restarting tunnel (would flap). Waiting...
+2026-01-13T10:12:29Z | public health FAIL (1/3)
+2026-01-13T10:12:49Z | public health FAIL (2/3)
+2026-01-13T10:13:09Z | public health FAIL (3/3)
+2026-01-13T10:13:12Z | origin health FAIL too -> NOT restarting tunnel (would flap). Waiting...
+2026-01-13T10:13:32Z | public health FAIL (1/3)
+2026-01-13T10:13:52Z | public health FAIL (2/3)
+2026-01-13T10:14:12Z | public health FAIL (3/3)
+2026-01-13T10:14:14Z | origin health FAIL too -> NOT restarting tunnel (would flap). Waiting...
+2026-01-13T10:14:34Z | public health FAIL (1/3)
+2026-01-13T10:14:54Z | public health FAIL (2/3)
+2026-01-13T15:07:07Z | WATCHDOG START | public=https://bridge.meidaledolls.com.br/health | threshold=3 | every=20s
+2026-01-13T15:07:07Z | public health FAIL (1/3)
+2026-01-13T15:07:07Z | tunnel process not running -> attempting start (requires origin OK).
+2026-01-13T15:07:09Z | origin health FAIL -> attempting run_flask.ps1
+2026-01-13T15:07:32Z | public health FAIL (2/3)
+2026-01-13T15:07:32Z | tunnel process not running -> attempting start (requires origin OK).
+2026-01-13T15:07:52Z | public health OK (recovered). Resetting fail counter.
+2026-01-13T15:11:40Z | public health FAIL (1/3)
+2026-01-13T15:12:01Z | public health FAIL (2/3)
+2026-01-13T15:12:21Z | public health OK (recovered). Resetting fail counter.
+2026-01-13T15:13:42Z | public health FAIL (1/3)
+2026-01-13T15:13:42Z | tunnel process not running -> attempting start (requires origin OK).
+2026-01-13T15:13:47Z | WATCHDOG START | public=https://bridge.meidaledolls.com.br/health | threshold=3 | every=20s
+2026-01-13T15:13:47Z | public health FAIL (1/3)
+2026-01-13T15:14:02Z | public health OK (recovered). Resetting fail counter.
+2026-01-13T15:14:07Z | public health FAIL (2/3)
+2026-01-13T15:14:28Z | public health OK (recovered). Resetting fail counter.
+2026-01-13T15:15:03Z | public health FAIL (1/3)
+2026-01-13T15:15:08Z | public health FAIL (1/3)
+2026-01-13T15:15:23Z | public health FAIL (2/3)
+2026-01-13T15:15:28Z | public health FAIL (2/3)
+2026-01-13T15:15:43Z | public health FAIL (3/3)
+2026-01-13T15:15:45Z | origin health FAIL -> starting Flask (no tunnel restart to avoid flapping).
+2026-01-13T15:15:48Z | public health OK (recovered). Resetting fail counter.
+2026-01-13T15:16:14Z | public health FAIL (1/3)
+2026-01-13T15:16:14Z | public health FAIL (1/3)
+2026-01-13T15:16:34Z | public health FAIL (2/3)
+2026-01-13T15:16:35Z | public health FAIL (2/3)
+2026-01-13T15:17:00Z | public health FAIL (3/3)
+2026-01-13T15:17:00Z | origin health OK -> restarting tunnel.
+2026-01-13T15:17:01Z | public health FAIL (3/3)
+2026-01-13T15:17:01Z | tunnel process not running -> attempting start (requires origin OK).
+2026-01-13T15:17:21Z | public health OK (recovered). Resetting fail counter.
+2026-01-13T15:22:14Z | WATCHDOG START | public=https://bridge.meidaledolls.com.br/health | threshold=3 | every=20s
